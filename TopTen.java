@@ -102,27 +102,45 @@ public class TopTen {
     private TreeMap<Integer, Text> repToRecordMap = new TreeMap<Integer, Text>();
 
     public void reduce(NullWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
-        // <FILL IN>
         System.out.println("Reducing");
         //TODO: IMPORTANT! FILL THE TREE BECAUSE THIS WORKS ONNLY WITH ONE MAPPER!!!
         //TODO: serializer and deserializer from-to-text
         for (Text value : values)
         {
-          String id = value.toString().split(" ")[1];
-          String reputationString = value.toString().split(" ")[0];
-          System.out.println(String.format("%s %s", id, reputationString));
-          Put insHBase = new Put(Bytes.toBytes(id));
+          Integer reputation = Integer.parseInt(value.toString().split(" ")[0]);
+          Text userID = new Text(value.toString().split(" ")[1]);
+          repToRecordMap.put(reputation, userID);
+        }
+        int emittedCount = 10;
+        for (Integer reputation : repToRecordMap.descendingKeySet())
+        {
+          // String id = value.toString().split(" ")[1];
+          // String reputationString = value.toString().split(" ")[0];
+          // System.out.println(String.format("%s %s", id, reputationString));
+          // getBytes may return polluted data;
+          // see https://coderwall.com/p/cqqeaa/hadoop-s-text-getbytes-is-a-tricky-method
+          byte[] id = repToRecordMap.get(reputation).copyBytes();
+          Put insHBase = new Put(id);
           insHBase.addColumn(
             Bytes.toBytes("info"),
             Bytes.toBytes("id"),
-            Bytes.toBytes(id)
+            id
           );
+          //we insert reputation as integer because it is the only way one could
+          //do aggregation on it without having to decode the utf8 value.
           insHBase.addColumn(
             Bytes.toBytes("info"),
             Bytes.toBytes("rep"),
-            Bytes.toBytes(reputationString)
+            // Bytes.toBytes(String.valueOf(reputation))
+            Bytes.toBytes(reputation)
           );
           context.write(null, insHBase);
+
+          emittedCount--;
+          if (emittedCount == 0)
+          {
+            break;
+          }
         }
 
 
@@ -147,6 +165,9 @@ public class TopTen {
 
     FileInputFormat.addInputPath(job, new Path(args[0]));
     job.setNumReduceTasks(1);
+    // 3 is always a good number to see if something works
+    // but this does not work because of this: https://wiki.apache.org/hadoop/HowManyMapsAndReduces
+    // job.setNumMapTasks(3);
     job.waitForCompletion(true);
 
   }
