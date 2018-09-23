@@ -126,8 +126,8 @@ public class TopTen {
           insHBase.addColumn(
             Bytes.toBytes("info"),
             Bytes.toBytes("rep"),
-            Bytes.toBytes(String.valueOf(reputation))
-            // Bytes.toBytes(reputation)
+            // Bytes.toBytes(String.valueOf(reputation))
+            Bytes.toBytes(reputation)
           );
           context.write(null, insHBase);
 
