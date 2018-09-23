@@ -50,10 +50,7 @@ public class TopTen {
     TreeMap<Integer, Text> repToRecordMap = new TreeMap<Integer, Text>();
 
     public void map(Object key, Text value, Context context) throws IOException, InterruptedException {
-        // <FILL IN>
-        // System.out.println("HEJ");
         Map<String,String> mappedXML = transformXmlToMap(value.toString());
-        // System.out.println(mappedXML.keySet());
         if (mappedXML.containsKey("Id")
             && mappedXML.get("Id") != null
             && mappedXML.containsKey("Reputation")
@@ -66,7 +63,6 @@ public class TopTen {
 
     protected void cleanup(Context context) throws IOException, InterruptedException {
         // Output our ten records to the reducers with a null key
-        // <FILL IN>
         System.out.println(
           String.format("There are %d records in the map", repToRecordMap.size())
           );
@@ -103,7 +99,6 @@ public class TopTen {
 
     public void reduce(NullWritable key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
         System.out.println("Reducing");
-        //TODO: IMPORTANT! FILL THE TREE BECAUSE THIS WORKS ONNLY WITH ONE MAPPER!!!
         //TODO: serializer and deserializer from-to-text
         for (Text value : values)
         {
@@ -131,8 +126,8 @@ public class TopTen {
           insHBase.addColumn(
             Bytes.toBytes("info"),
             Bytes.toBytes("rep"),
-            // Bytes.toBytes(String.valueOf(reputation))
-            Bytes.toBytes(reputation)
+            Bytes.toBytes(String.valueOf(reputation))
+            // Bytes.toBytes(reputation)
           );
           context.write(null, insHBase);
 
@@ -148,11 +143,14 @@ public class TopTen {
   }
 
   public static void main(String[] args) throws Exception {
-  // <FILL IN>
     Configuration conf = HBaseConfiguration.create();
     Job job = Job.getInstance(conf);
     job.setJarByClass(TopTen.class);
+    //setting the reducer and combiner
+    //gives problems with the initTableReducerJob so do not do that
+    //while using hbase
     job.setMapperClass(TopTenMapper.class);
+
     //do not use job.setOutputKeyClass because it sets
     //the type both for the mapper and the reducer
     //in our case the type handlyng for the reducer is performed
@@ -166,8 +164,7 @@ public class TopTen {
     FileInputFormat.addInputPath(job, new Path(args[0]));
     job.setNumReduceTasks(1);
     // 3 is always a good number to see if something works
-    // but this does not work because of this: https://wiki.apache.org/hadoop/HowManyMapsAndReduces
-    // job.setNumMapTasks(3);
+    // but setNumMapTasks this does not work because of this: https://wiki.apache.org/hadoop/HowManyMapsAndReduces
     job.waitForCompletion(true);
 
   }
